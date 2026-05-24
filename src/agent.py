@@ -65,7 +65,7 @@ Return ONLY valid JSON (no markdown):
 def fetch_metric(ticker, metric, description, source_hint):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
-        model="claude-sonnet-4-20250514", max_tokens=512, system=SYSTEM,
+        model="claude-sonnet-4-5", max_tokens=512, system=SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role":"user","content":
             f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only JSON."}])
