@@ -20,7 +20,10 @@ def sheets_client():
     return gspread.authorize(creds)
 
 def load_watchlist(gc):
-    ws = gc.open_by_key(GOOGLE_SHEET_ID).worksheet(WATCHLIST_TAB)
+    sh = gc.open_by_key(GOOGLE_SHEET_ID)
+    print(f"Sheet title: {sh.title}")
+    print(f"Worksheets: {[w.title for w in sh.worksheets()]}")
+    ws = sh.worksheet(WATCHLIST_TAB)
     return [r for r in ws.get_all_records() if r.get("ticker")]
 
 def append_history(gc, rows):
