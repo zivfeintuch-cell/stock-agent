@@ -118,12 +118,12 @@ def run():
         print(f"  {row['ticker']} / {row['metric_name']}")
         data = fetch_metric(row["ticker"], row["metric_name"],
                             row.get("metric_description",""), row.get("source_hint",""))
-fetched = data.get("value")
-if fetched is None and row.get("last_value") not in ("", None):
-    fetched = float(row["last_value"])
-    data["note"] = "[fallback to last_value] " + data.get("note","")
-row.update({"fetched_value": fetched, "period": data.get("period",""),
-            "source": data.get("source",""), "agent_note": data.get("note","")})
+        fetched = data.get("value")
+        if fetched is None and row.get("last_value") not in ("", None):
+            fetched = float(row["last_value"])
+            data["note"] = "[fallback to last_value] " + data.get("note","")
+        row.update({"fetched_value": fetched, "period": data.get("period",""),
+                    "source": data.get("source",""), "agent_note": data.get("note","")})
         results.append(row)
         print(f"    → {row['fetched_value']}  [{'BREACH' if is_breached(row) else 'ok'}]")
         if is_breached(row): alerts.append(row)
