@@ -1,8 +1,8 @@
 """
 stock_agent — src/agent.py
 """
-import os, json, datetime
-import anthropic, gspread, requests, time
+import os, json, datetime, time
+import anthropic, gspread, requests
 from google.oauth2.service_account import Credentials
 
 ANTHROPIC_API_KEY       = os.environ["ANTHROPIC_API_KEY"]
@@ -122,7 +122,7 @@ def update_universe(gc):
     ticker_to_row = {r["ticker"]: i+2 for i, r in enumerate(existing)}
     today = datetime.date.today().isoformat()
 
-    print(f"Updating universe ({len(UNIVERSE_TICKERS)} tickers)...")time.sleep(10)
+    print(f"Updating universe ({len(UNIVERSE_TICKERS)} tickers)...")
     for ticker in UNIVERSE_TICKERS:
         print(f"  fetching {ticker}...")
         data = fetch_universe_metric(ticker)
@@ -145,6 +145,7 @@ def update_universe(gc):
         else:
             ws.append_row(row_data)
         print(f"    price={data.get('price')} eps={data.get('eps_ttm')} pe={data.get('pe')}")
+        time.sleep(15)
 
     print("Universe update complete.")
 
@@ -205,7 +206,6 @@ def is_due(row):
 
 
 def is_universe_day():
-    """Run universe update every Sunday (weekday 6)"""
     return True
 
 
@@ -213,11 +213,9 @@ def run():
     print(f"[{datetime.datetime.now().isoformat()}] agent starting")
     gc = sheets_client()
 
-    # Universe update — every Sunday
     if is_universe_day():
         update_universe(gc)
 
-    # Watchlist alerts — per frequency setting
     to_check = [r for r in load_watchlist(gc) if is_due(r)]
     if not to_check:
         print("Nothing due today")
