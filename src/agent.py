@@ -206,7 +206,7 @@ def is_due(row):
 
 def is_universe_day():
     """Run universe update every Sunday (weekday 6)"""
-    return datetime.date.today().weekday() == 6
+    return True
 
 
 def run():
