@@ -1,7 +1,7 @@
 """
 stock_agent — src/agent.py
 """
-import os, json, datetime, time
+import os, json, datetime, time, re
 import anthropic, gspread, requests
 from google.oauth2.service_account import Credentials
 
@@ -25,19 +25,9 @@ UNIVERSE_HEADERS = [
 
 UNIVERSE_SYSTEM = """You are a financial data extraction agent.
 Find the most recent official values for all requested metrics.
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "name": "<company full name>",
-  "price": <float or null>,
-  "eps_ttm": <float or null>,
-  "pe": <float or null>,
-  "forward_pe": <float or null>,
-  "revenue_growth_yoy": <float percentage e.g. 12.5 for 12.5% or null>,
-  "operating_margin": <float percentage e.g. 18.3 for 18.3% or null>,
-  "fcf_margin": <float percentage or null>,
-  "net_debt_ebitda": <float or null>,
-  "source": "<url of primary source used>"
-}"""
+Return ONLY a raw JSON object — no markdown, no backticks, no explanation, no extra text.
+Example output:
+{"name":"Apple Inc","price":189.5,"eps_ttm":6.43,"pe":29.4,"forward_pe":27.1,"revenue_growth_yoy":8.1,"operating_margin":31.2,"fcf_margin":26.0,"net_debt_ebitda":-1.2,"source":"https://finance.yahoo.com/quote/AAPL"}"""
 
 
 def sheets_client():
@@ -98,6 +88,23 @@ def write_last_value(gc, rows):
                 break
 
 
+def extract_json(text):
+    """Extract JSON from text even if wrapped in markdown or extra text."""
+    # Try direct parse first
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        pass
+    # Try extracting JSON object with regex
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+    return {}
+
+
 def fetch_universe_metric(ticker):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
@@ -107,13 +114,12 @@ def fetch_universe_metric(ticker):
             f"Ticker: {ticker}\n"
             f"Fetch: price, EPS (TTM), P/E, Forward P/E, Revenue Growth YoY %, "
             f"Operating Margin %, Free Cash Flow Margin %, Net Debt/EBITDA.\n"
-            f"Return only JSON."}])
+            f"Return only a raw JSON object, no markdown."}])
     text = next((b.text for b in resp.content if b.type=="text"), "")
-    try:
-        return json.loads(text.replace("```json","").replace("```","").strip())
-    except json.JSONDecodeError:
-        print(f"  [universe] JSON parse error for {ticker}: {text[:200]}")
-        return {}
+    data = extract_json(text)
+    if not data:
+        print(f"  [universe] could not parse JSON for {ticker}: {text[:150]}")
+    return data
 
 
 def update_universe(gc):
@@ -141,18 +147,18 @@ def update_universe(gc):
         ]
         if ticker in ticker_to_row:
             row_num = ticker_to_row[ticker]
-            ws.update(f"A{row_num}:K{row_num}", [row_data])
+            ws.update(values=[row_data], range_name=f"A{row_num}:K{row_num}")
         else:
             ws.append_row(row_data)
         print(f"    price={data.get('price')} eps={data.get('eps_ttm')} pe={data.get('pe')}")
-        time.sleep(15)
+        time.sleep(30)
 
     print("Universe update complete.")
 
 
 SYSTEM = """You are a financial data extraction agent.
 Find the most recent official value for the given metric.
-Return ONLY valid JSON (no markdown):
+Return ONLY a raw JSON object, no markdown, no backticks:
 {"value": <float or null>, "period": "<Q1 2025>", "source": "<url>", "note": "<one sentence>"}"""
 
 
@@ -162,12 +168,12 @@ def fetch_metric(ticker, metric, description, source_hint):
         model="claude-sonnet-4-5", max_tokens=512, system=SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role":"user","content":
-            f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only JSON."}])
+            f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only raw JSON."}])
     text = next((b.text for b in resp.content if b.type=="text"), "")
-    try:
-        return json.loads(text.replace("```json","").replace("```","").strip())
-    except json.JSONDecodeError:
+    data = extract_json(text)
+    if not data:
         return {"value":None,"period":"","source":"","note":text[:200]}
+    return data
 
 
 def is_breached(row):
