@@ -2,7 +2,7 @@
 stock_agent — src/agent.py
 """
 import os, json, datetime
-import anthropic, gspread, requests
+import anthropic, gspread, requests, time
 from google.oauth2.service_account import Credentials
 
 ANTHROPIC_API_KEY       = os.environ["ANTHROPIC_API_KEY"]
@@ -122,7 +122,7 @@ def update_universe(gc):
     ticker_to_row = {r["ticker"]: i+2 for i, r in enumerate(existing)}
     today = datetime.date.today().isoformat()
 
-    print(f"Updating universe ({len(UNIVERSE_TICKERS)} tickers)...")
+    print(f"Updating universe ({len(UNIVERSE_TICKERS)} tickers)...")time.sleep(10)
     for ticker in UNIVERSE_TICKERS:
         print(f"  fetching {ticker}...")
         data = fetch_universe_metric(ticker)
