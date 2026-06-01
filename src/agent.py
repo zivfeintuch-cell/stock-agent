@@ -24,10 +24,11 @@ UNIVERSE_HEADERS = [
 ]
 
 UNIVERSE_SYSTEM = """You are a financial data extraction agent.
-Find the most recent official values for all requested metrics.
-Return ONLY a raw JSON object — no markdown, no backticks, no explanation, no extra text.
-Example output:
-{"name":"Apple Inc","price":189.5,"eps_ttm":6.43,"pe":29.4,"forward_pe":27.1,"revenue_growth_yoy":8.1,"operating_margin":31.2,"fcf_margin":26.0,"net_debt_ebitda":-1.2,"source":"https://finance.yahoo.com/quote/AAPL"}"""
+Search ONCE for the ticker and return all available metrics in a single JSON object.
+Do not make multiple searches. Use only the data from your single search.
+Return ONLY a raw JSON object — no markdown, no backticks, no explanation:
+{"name":"full company name","price":0.0,"eps_ttm":0.0,"pe":0.0,"forward_pe":0.0,"revenue_growth_yoy":0.0,"operating_margin":0.0,"fcf_margin":0.0,"net_debt_ebitda":0.0,"source":"url"}
+Use null for any value you cannot find."""
 
 
 def sheets_client():
@@ -105,13 +106,13 @@ def extract_json(text):
 def fetch_universe_metric(ticker):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
-        model="claude-haiku-4-5-20251001", max_tokens=1024, system=UNIVERSE_SYSTEM,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1024,
+        system=UNIVERSE_SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
+        tool_choice={"type": "auto", "disable_parallel_tool_use": True},
         messages=[{"role": "user", "content":
-            f"Ticker: {ticker}\n"
-            f"Fetch: price, EPS (TTM), P/E, Forward P/E, Revenue Growth YoY %, "
-            f"Operating Margin %, Free Cash Flow Margin %, Net Debt/EBITDA.\n"
-            f"Return only a raw JSON object, no markdown."}])
+            f"Search for '{ticker} stock financials' and return the JSON with all metrics. One search only."}])
     text = next((b.text for b in resp.content if b.type == "text"), "")
     data = extract_json(text)
     if not data:
@@ -162,8 +163,11 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 def fetch_metric(ticker, metric, description, source_hint):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
-        model="claude-haiku-4-5-20251001", max_tokens=512, system=SYSTEM,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        system=SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
+        tool_choice={"type": "auto", "disable_parallel_tool_use": True},
         messages=[{"role": "user", "content":
             f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only raw JSON."}])
     text = next((b.text for b in resp.content if b.type == "text"), "")
