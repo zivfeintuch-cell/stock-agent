@@ -107,12 +107,12 @@ def fetch_universe_metric(ticker):
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001", max_tokens=1024, system=UNIVERSE_SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
-        messages=[{"role":"user","content":
+        messages=[{"role": "user", "content":
             f"Ticker: {ticker}\n"
             f"Fetch: price, EPS (TTM), P/E, Forward P/E, Revenue Growth YoY %, "
             f"Operating Margin %, Free Cash Flow Margin %, Net Debt/EBITDA.\n"
             f"Return only a raw JSON object, no markdown."}])
-    text = next((b.text for b in resp.content if b.type=="text"), "")
+    text = next((b.text for b in resp.content if b.type == "text"), "")
     data = extract_json(text)
     if not data:
         print(f"  [universe] could not parse JSON for {ticker}: {text[:150]}")
@@ -148,7 +148,7 @@ def update_universe(gc):
         else:
             ws.append_row(row_data)
         print(f"    price={data.get('price')} eps={data.get('eps_ttm')} pe={data.get('pe')}")
-       time.sleep(60)
+        time.sleep(60)
 
     print("Universe update complete.")
 
@@ -164,33 +164,39 @@ def fetch_metric(ticker, metric, description, source_hint):
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001", max_tokens=512, system=SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
-        messages=[{"role":"user","content":
+        messages=[{"role": "user", "content":
             f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only raw JSON."}])
-    text = next((b.text for b in resp.content if b.type=="text"), "")
+    text = next((b.text for b in resp.content if b.type == "text"), "")
     data = extract_json(text)
     if not data:
-        return {"value":None,"period":"","source":"","note":text[:200]}
+        return {"value": None, "period": "", "source": "", "note": text[:200]}
     return data
 
 
 def is_breached(row):
     val = row.get("fetched_value")
-    if val is None: return False
+    if val is None:
+        return False
     try:
         v = float(val)
         lo, hi = row.get("threshold_low"), row.get("threshold_high")
-        if lo not in ("",None) and v < float(lo): return True
-        if hi not in ("",None) and v > float(hi): return True
-    except (ValueError, TypeError): pass
+        if lo not in ("", None) and v < float(lo):
+            return True
+        if hi not in ("", None) and v > float(hi):
+            return True
+    except (ValueError, TypeError):
+        pass
     return False
 
 
 def send_telegram(text):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("[Telegram] not configured"); return
+        print("[Telegram] not configured")
+        return
     r = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-        json={"chat_id":TELEGRAM_CHAT_ID,"text":text,"parse_mode":"HTML"}, timeout=10)
-    if not r.ok: print(f"[Telegram] error: {r.text}")
+        json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"}, timeout=10)
+    if not r.ok:
+        print(f"[Telegram] error: {r.text}")
 
 
 def format_alert(row):
@@ -201,11 +207,11 @@ def format_alert(row):
 
 
 def is_due(row):
-    freq = str(row.get("frequency","")).lower()
+    freq = str(row.get("frequency", "")).lower()
     today = datetime.date.today()
-    return (freq=="daily" or
-            (freq=="weekly" and today.weekday()==0) or
-            (freq in ("monthly","quarterly") and today.day==1))
+    return (freq == "daily" or
+            (freq == "weekly" and today.weekday() == 0) or
+            (freq in ("monthly", "quarterly") and today.day == 1))
 
 
 def is_universe_day():
@@ -228,16 +234,17 @@ def run():
         for row in to_check:
             print(f"  {row['ticker']} / {row['metric_name']}")
             data = fetch_metric(row["ticker"], row["metric_name"],
-                                row.get("metric_description",""), row.get("source_hint",""))
+                                row.get("metric_description", ""), row.get("source_hint", ""))
             fetched = data.get("value")
             if fetched is None and row.get("last_value") not in ("", None):
                 fetched = float(row["last_value"])
-                data["note"] = "[fallback to last_value] " + data.get("note","")
-            row.update({"fetched_value": fetched, "period": data.get("period",""),
-                        "source": data.get("source",""), "agent_note": data.get("note","")})
+                data["note"] = "[fallback to last_value] " + data.get("note", "")
+            row.update({"fetched_value": fetched, "period": data.get("period", ""),
+                        "source": data.get("source", ""), "agent_note": data.get("note", "")})
             results.append(row)
             print(f"    → {row['fetched_value']}  [{'BREACH' if is_breached(row) else 'ok'}]")
-            if is_breached(row): alerts.append(row)
+            if is_breached(row):
+                alerts.append(row)
         append_history(gc, results)
         write_last_value(gc, results)
         if alerts:
