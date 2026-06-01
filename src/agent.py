@@ -89,13 +89,10 @@ def write_last_value(gc, rows):
 
 
 def extract_json(text):
-    """Extract JSON from text even if wrapped in markdown or extra text."""
-    # Try direct parse first
     try:
         return json.loads(text.strip())
     except json.JSONDecodeError:
         pass
-    # Try extracting JSON object with regex
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
         try:
@@ -108,7 +105,7 @@ def extract_json(text):
 def fetch_universe_metric(ticker):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
-        model="claude-sonnet-4-5", max_tokens=1024, system=UNIVERSE_SYSTEM,
+        model="claude-haiku-4-5-20251001", max_tokens=1024, system=UNIVERSE_SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role":"user","content":
             f"Ticker: {ticker}\n"
@@ -151,7 +148,7 @@ def update_universe(gc):
         else:
             ws.append_row(row_data)
         print(f"    price={data.get('price')} eps={data.get('eps_ttm')} pe={data.get('pe')}")
-        time.sleep(30)
+        time.sleep(10)
 
     print("Universe update complete.")
 
@@ -165,7 +162,7 @@ Return ONLY a raw JSON object, no markdown, no backticks:
 def fetch_metric(ticker, metric, description, source_hint):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resp = client.messages.create(
-        model="claude-sonnet-4-5", max_tokens=512, system=SYSTEM,
+        model="claude-haiku-4-5-20251001", max_tokens=512, system=SYSTEM,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role":"user","content":
             f"Ticker:{ticker}\nMetric:{metric}\nDesc:{description}\nHint:{source_hint}\nReturn only raw JSON."}])
