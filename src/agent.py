@@ -148,7 +148,7 @@ def update_universe(gc):
         else:
             ws.append_row(row_data)
         print(f"    price={data.get('price')} eps={data.get('eps_ttm')} pe={data.get('pe')}")
-        time.sleep(10)
+       time.sleep(60)
 
     print("Universe update complete.")
 
