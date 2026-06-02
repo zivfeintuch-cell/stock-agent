@@ -285,7 +285,7 @@ def is_due(row):
             or (freq == "weekly"   and today.weekday() == 0)
             or (freq in ("monthly","quarterly") and today.day == 1))
 def is_universe_day():
-    return True
+    return datetime.date.today().weekday() == 6
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def run():
