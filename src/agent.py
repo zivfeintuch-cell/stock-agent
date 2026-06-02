@@ -284,11 +284,8 @@ def is_due(row):
     return (freq == "daily"
             or (freq == "weekly"   and today.weekday() == 0)
             or (freq in ("monthly","quarterly") and today.day == 1))
-
-
 def is_universe_day():
-return True
-
+    return True
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def run():
