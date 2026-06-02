@@ -287,7 +287,7 @@ def is_due(row):
 
 
 def is_universe_day():
-    return datetime.date.today().weekday() == 6   # Sunday only
+    return datetime.date.today().weekday() == return True   # Sunday only
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
